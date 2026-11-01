@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:job="urn:synthetic-job-contract" xmlns:atom="http://www.w3.org/2005/Atom"><channel>
+<title>합성 테스트 피드 — 공식 부산시 명세가 아님</title>
+<item><guid>7</guid><title>공무직 채용</title><link>https://www.busan.go.kr/notice/7</link><job:agency>테스트 기관</job:agency><job:deadline>2026-11-01</job:deadline><job:type>공무직</job:type><pubDate>Fri, 30 Oct 2026 00:00:00 +0900</pubDate></item>
+<item><guid>8</guid><title>접수 마감일 없음</title><link>https://www.busan.go.kr/notice/8</link><job:agency>테스트 기관</job:agency><pubDate>Fri, 30 Oct 2026 00:00:00 +0900</pubDate></item>
+<atom:link rel="next" href="https://www.busan.go.kr/supported-feed?page=2"/>
+</channel></rss>

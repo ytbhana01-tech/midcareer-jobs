@@ -96,6 +96,40 @@ def main():
             page.clock.set_fixed_time(dt.datetime(2026,11,1,15,0,1,tzinfo=dt.timezone.utc))
             page.evaluate('render()');expect(page.locator('.job')).to_have_count(1)
             expect(page.locator('.job h3')).to_have_text('미확인 조건')
+            # All new-source data below is synthetic; no new live integration is implied.
+            import copy
+            multi=copy.deepcopy(fixture)
+            multi['source']='multi-source'
+            multi['sources']={
+                'alio':{'status':'cached','mode':'alio-public-preview','updated_at':fixture['updated_at'],'originals_verified':False},
+                'nara':{'status':'ok','mode':'official-api','updated_at':fixture['updated_at'],'originals_verified':True},
+                'busan':{'status':'disabled'}}
+            nara={'id':'nara:1','notice_id':'1','source_id':'nara','title':'기간제 공고',
+                  'org':'테스트 기관','region':'부산','type':'기간제','education':'','career':'',
+                  'tags':['기간제'],'employment_types':['기간제'],'deadline':'2026-11-02',
+                  'closes_at':'2026-11-02T13:00:00+09:00','source_url':'https://example.org/nara/1'}
+            nara['attributions']=[{'source_id':'nara'},{'source_id':'alio'}]
+            multi['jobs'].append(nara)
+            page.unroute('**/jobs.json')
+            page.route('**/jobs.json',lambda route:route.fulfill(json=multi))
+            page.clock.set_fixed_time(dt.datetime(2026,11,2,3,tzinfo=dt.timezone.utc))
+            page.reload()
+            page.locator('#reset-filters').click()
+            expect(page.locator('.job')).to_have_count(2)  # IDs 1 and nara:1 never collide.
+            expect(page.locator('#feed-notice')).to_contain_text('부산광역시: 연결 대기')
+            page.locator('#source').select_option('nara')
+            expect(page.locator('.job')).to_have_count(1)
+            expect(page.locator('.source-attribution')).to_contain_text('나라일터')
+            page.locator('#employment').select_option('기간제')
+            expect(page.locator('.job')).to_have_count(1)
+            page.locator('[data-detail]').first.click()
+            expect(page.locator('#detail-facts')).to_contain_text('나라일터')
+            page.keyboard.press('Escape')
+            page.locator('#source').select_option('busan');expect(page.locator('.job')).to_have_count(0)
+            page.locator('#source').select_option('alio');expect(page.locator('.job')).to_have_count(1)
+            page.clock.set_fixed_time(dt.datetime(2026,11,2,4,0,1,tzinfo=dt.timezone.utc))
+            page.evaluate('render()');expect(page.locator('.job')).to_have_count(0)
+            print('PASS: multi-source attribution/filter, disabled source label, period-contract filter, namespaced IDs, exact KST closing time')
             page.unroute('**/jobs.json')
             page.route('**/jobs.json',lambda route:route.fulfill(status=503,body='Unavailable'))
             page.reload();expect(page.locator('#feed-notice')).to_contain_text('불러오지 못했습니다')

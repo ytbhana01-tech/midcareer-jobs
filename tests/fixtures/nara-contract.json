@@ -1,0 +1,1 @@
+{"response":{"header":{"resultCode":"00"},"body":{"totalCount":2,"items":{"item":[{"notice":"7","agency":"테스트 기관","heading":"기간제 채용","closes":"2026-11-01T17:00:00+09:00","original":"https://agency.go.kr/notice/7","hire":"기간제","school":"학력무관"},{"notice":"8","agency":"테스트 기관","heading":"날짜 미확인 공고","original":"https://agency.go.kr/notice/8"}]}}}}

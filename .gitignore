@@ -10,3 +10,4 @@ __pycache__/
 dist/
 jobs.json.tmp
 playwright-artifacts/
+.collector-cache/

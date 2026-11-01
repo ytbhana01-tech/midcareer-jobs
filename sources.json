@@ -1,0 +1,42 @@
+{
+  "nara": {
+    "enabled": false,
+    "dataset_url": "https://www.data.go.kr/data/15156780/openapi.do",
+    "endpoint": null,
+    "format": null,
+    "key_parameter": null,
+    "page_parameter": null,
+    "size_parameter": null,
+    "success_path": null,
+    "success_codes": [],
+    "total_path": null,
+    "items_path": null,
+    "fields": {},
+    "original_hosts": [],
+    "min_interval": 1,
+    "review": {
+      "spec_url": null,
+      "rights_url": null,
+      "reviewed_at": null,
+      "redistribution_allowed": false,
+      "spec_verified": false
+    }
+  },
+  "busan": {
+    "enabled": false,
+    "board_url": "https://www.busan.go.kr/depart/jobgonji01",
+    "endpoint": null,
+    "format": null,
+    "items_path": null,
+    "fields": {},
+    "original_hosts": ["www.busan.go.kr"],
+    "min_interval": 2,
+    "review": {
+      "spec_url": null,
+      "rights_url": null,
+      "reviewed_at": null,
+      "redistribution_allowed": false,
+      "spec_verified": false
+    }
+  }
+}
