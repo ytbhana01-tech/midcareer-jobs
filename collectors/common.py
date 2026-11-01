@@ -101,7 +101,9 @@ def normalize(rows, source_id, source_name, now=None):
         # Publish a narrow allowlist, never copy arbitrary source fields.
         job = {key: str(row.get(key) or '').strip() for key in (
             'title','org','region','type','education','career','qualifications','procedure','preference',
-            'agency_id','announcement_number')}
+            'agency_id','announcement_number','description')}
+        job['agency_url']=canonical_url(row.get('agency_url'))
+        job['published_date']=closing(row.get('published_date'))[0]
         types = classify(job['title'], job['type'])
         tags = [x for x in types if x != '기타']
         if job['career'].replace(' ', '') == '경력무관':
@@ -184,7 +186,7 @@ class OfficialHTTP:
             self.robots[origin]=robot
         return self.robots[origin].can_fetch(USER_AGENT,url)
 
-    def original(self, url):
+    def original(self, url, expected_text=None):
         # A known HTTP 404/410 or robots denial excludes the announcement. Unknown
         # transport failures fail this source update, preserving its previous snapshot.
         if not self.allowed(url):
@@ -195,6 +197,10 @@ class OfficialHTTP:
             if str(error)=='Original not found':
                 return False
             raise
+        if expected_text:
+            text=html.unescape(html.unescape(body.decode('utf-8',errors='replace')))
+            text=' '.join(re.sub(r'<[^>]+>',' ',text).split())
+            if ' '.join(expected_text.split()) not in text:return False
         return bool(body.strip())
 
 

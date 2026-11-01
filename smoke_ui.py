@@ -66,6 +66,23 @@ def main():
             page.set_viewport_size({'width':390,'height':844})
             page.screenshot(path='playwright-artifacts/mobile.png',full_page=True)
             print('PASS: real feed, search, source links, modal/escape, filters, reset, pagination, sort, responsive widths 320/390/768/1440')
+            # A live multi-source artifact must prove a real Nara record is searchable.
+            live_nara=[j for j in snapshot['jobs'] if 'nara' in [a.get('source_id') for a in j.get('attributions',[])] or j.get('source_id')=='nara']
+            if live_nara:
+                sample=live_nara[0]
+                page.locator('#reset-filters').click()
+                page.locator('#source').select_option('nara')
+                page.locator('#q').fill(sample['title'])
+                expect(page.locator('.job').first).to_be_visible()
+                expect(page.locator('.job h3').first).to_have_text(sample['title'])
+                expect(page.locator('.source-attribution').first).to_contain_text('나라일터')
+                page.locator('[data-detail]').first.click()
+                expect(page.locator('#detail-facts')).to_contain_text('나라일터')
+                assert page.locator('#detail-source').get_attribute('href').startswith('https://')
+                if sample.get('description'):expect(page.locator('#detail-content')).to_contain_text(sample['description'])
+                page.keyboard.press('Escape')
+                page.locator('#reset-filters').click()
+                print('PASS: live Nara API record search, source filtering, attribution and detail content')
             # Controlled feed exercises malicious strings, unknown fields, expiry, and exact matching.
             fixture={'updated_at':'2026-11-01T12:00:00+09:00','source':'alio-public-preview',
                      'authenticated_api_verified':False,'jobs':[

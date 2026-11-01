@@ -15,7 +15,7 @@ function hasTag(j,tag) { return Array.isArray(j.tags)&&j.tags.includes(tag); }
 function matches(j,filters) {
   if(filters.source&&!sourcesOf(j).includes(filters.source))return false;
   const q=filters.q.trim().toLocaleLowerCase('ko');
-  if(q&&!`${j.title} ${j.org} ${j.region}`.toLocaleLowerCase('ko').includes(q))return false;
+  if(q&&!`${j.title} ${j.org} ${j.region} ${j.description||''}`.toLocaleLowerCase('ko').includes(q))return false;
   if(filters.region&&!String(j.region).split(',').map(x=>x.trim()).includes(filters.region))return false;
   const employment=filters.employment;
   if(employment==='focus'&&!hasTag(j,'공무직')&&!hasTag(j,'무기계약직'))return false;
@@ -36,12 +36,12 @@ function render(){
   $('total-stat').textContent=active.length.toLocaleString('ko');
   $('focus-stat').textContent=active.filter(j=>hasTag(j,'공무직')||hasTag(j,'무기계약직')).length.toLocaleString('ko');
   $('education-stat').textContent=active.filter(j=>hasTag(j,'학력무관')).length.toLocaleString('ko');
-  const filtered=active.filter(j=>matches(j,filters)).sort((a,b)=>$('sort').value==='recent'?(b.start||'').localeCompare(a.start||'')||a.deadline.localeCompare(b.deadline):a.deadline.localeCompare(b.deadline)||a.id.localeCompare(b.id));
+  const filtered=active.filter(j=>matches(j,filters)).sort((a,b)=>$('sort').value==='recent'?(b.published_date||b.start||'').localeCompare(a.published_date||a.start||'')||a.deadline.localeCompare(b.deadline):a.deadline.localeCompare(b.deadline)||a.id.localeCompare(b.id));
   $('count').textContent=filtered.length.toLocaleString('ko');
   $('active-filter').textContent=[filters.q?`검색: ${filters.q}`:'',...['source','region','employment','career','education'].filter(id=>$(id).value).map(id=>$(id).selectedOptions[0].textContent)].filter(Boolean).join(' · ')||'전체 접수 중 공고';
   $('cards').innerHTML=filtered.length?filtered.slice(0,limit).map(j=>{
     const days=Math.round((Date.parse(j.deadline)-Date.parse(today))/86400000);
-    return `<article class="job"><div class="card-top"><span class="org">${esc(j.org)}</span><span class="countdown ${days<=3?'urgent':''}">${days===0?'오늘 마감':`D−${days}`}</span></div><h3>${esc(j.title)}</h3><p class="source-attribution">출처: ${sourcesOf(j).map(id=>esc(sourceNames[id])).join(' · ')} · ${esc(j.collected_at?new Date(j.collected_at).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'기존 피드')}</p><div class="tags">${(j.tags||[]).map(tag=>`<span class="tag ${['공무직','무기계약직'].includes(tag)?'focus':''}">${esc(tag)}</span>`).join('')}${!(j.tags||[]).length?'<span class="tag">관심 조건 명시 없음</span>':''}</div><dl class="facts"><dt>근무지</dt><dd>${esc(j.region||'미확인')}</dd><dt>고용형태</dt><dd>${esc(j.type||'미확인')}</dd><dt>경력 · 학력</dt><dd>${esc(j.career||'미확인')} · ${esc(j.education||'미확인')}</dd><dt>접수 마감</dt><dd>${esc(j.deadline)} <span>(한국 날짜)</span></dd></dl><div class="card-bottom"><button type="button" data-detail="${esc(j.id)}" aria-label="${esc(j.title)} 상세 보기">자격요건 · 상세 보기 →</button><a class="source-link" href="${esc(safeURL(j.source_url))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(j.title)} 기관 원문 새 창">기관 원문 ↗</a></div></article>`;
+    return `<article class="job"><div class="card-top"><span class="org">${esc(j.org)}</span><span class="countdown ${days<=3?'urgent':''}">${days===0?'오늘 마감':`D−${days}`}</span></div><h3>${esc(j.title)}</h3><p class="source-attribution">출처: ${sourcesOf(j).map(id=>esc(sourceNames[id])).join(' · ')} · ${esc(j.collected_at?new Date(j.collected_at).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'기존 피드')}</p><div class="tags">${(j.tags||[]).map(tag=>`<span class="tag ${['공무직','무기계약직'].includes(tag)?'focus':''}">${esc(tag)}</span>`).join('')}${!(j.tags||[]).length?'<span class="tag">관심 조건 명시 없음</span>':''}${j.source_id==='nara'&&!j.start?'<span class="tag">접수 시작일 원문 확인</span>':''}</div><dl class="facts"><dt>근무지</dt><dd>${esc(j.region||'미확인')}</dd><dt>고용형태</dt><dd>${esc(j.type||'미확인')}</dd><dt>경력 · 학력</dt><dd>${esc(j.career||'미확인')} · ${esc(j.education||'미확인')}</dd><dt>접수 마감</dt><dd>${esc(j.deadline)} <span>(한국 날짜)</span></dd></dl><div class="card-bottom"><button type="button" data-detail="${esc(j.id)}" aria-label="${esc(j.title)} 상세 보기">자격요건 · 상세 보기 →</button><a class="source-link" href="${esc(safeURL(j.source_url))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(j.title)} 공고 원문 새 창">공고 원문 ↗</a></div></article>`;
   }).join(''):`<div class="empty"><b>${feed?'조건에 맞는 접수 중 공고가 없습니다.':'채용정보를 표시할 수 없습니다.'}</b>${feed?'검색어나 필터를 바꿔 보세요. 확인되지 않은 조건은 검색 결과에 포함하지 않습니다.':'잠시 후 다시 시도해 주세요. 데이터를 임의로 만들어 표시하지 않습니다.'}</div>`;
   $('more').hidden=filtered.length<=limit;
   $('more').textContent=`공고 더 보기 (${Math.min(limit,filtered.length)} / ${filtered.length})`;
@@ -56,8 +56,8 @@ function detail(id){
     const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value||'미확인';$('detail-facts').append(dt,dd);
   }
   $('detail-content').replaceChildren();
-  for(const [title,value] of [['지원 자격',j.qualifications],['전형 절차',j.procedure],['우대 조건',j.preference]]){
-    const h=document.createElement('h3'),p=document.createElement('p');h.textContent=title;p.textContent=value||'출처에서 확인되지 않았습니다. 기관 원문을 확인해 주세요.';$('detail-content').append(h,p);
+  for(const [title,value] of [['공고 내용',j.description],['지원 자격',j.qualifications],['전형 절차',j.procedure],['우대 조건',j.preference]]){
+    const h=document.createElement('h3'),p=document.createElement('p');h.textContent=title;p.textContent=value||'출처에서 확인되지 않았습니다. 공고 원문을 확인해 주세요.';$('detail-content').append(h,p);
   }
   $('detail-source').href=safeURL(j.source_url);$('detail').showModal();$('detail').scrollTop=0;
 }
@@ -85,6 +85,7 @@ function feedStatus(){
       let label=pending?'연결 대기':`${count}건${cached?' · 이전 데이터':''}${stale?' · 갱신 지연':''}`;
       if(!pending&&status.mode==='alio-public-preview')label+=' · 공개 조회, 인증 API 미검증';
       if(!pending&&!status.originals_verified)label+=' · 원문 재검증 대기';
+      if(status.coverage&&!pending)label+=' · '+status.coverage;
       return `${name}: ${label}`;
     });
     $('feed-notice').textContent=messages.join(' / ')+' · 종료된 공고는 자동 제외됩니다.';

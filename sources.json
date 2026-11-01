@@ -1,26 +1,39 @@
 {
   "nara": {
-    "enabled": false,
+    "enabled": true,
     "dataset_url": "https://www.data.go.kr/data/15156780/openapi.do",
-    "endpoint": null,
-    "format": null,
-    "key_parameter": null,
-    "page_parameter": null,
-    "size_parameter": null,
-    "success_path": null,
-    "success_codes": [],
-    "total_path": null,
-    "items_path": null,
-    "fields": {},
-    "original_hosts": [],
+    "endpoint": "https://apis.data.go.kr/1760000/PblJobService/getList",
+    "format": "xml",
+    "key_parameter": "serviceKey",
+    "page_parameter": "pageNo",
+    "size_parameter": "numOfRows",
+    "success_path": "response.header.resultCode",
+    "success_codes": [
+      "00"
+    ],
+    "total_path": "response.body.totalCount",
+    "items_path": "response.body.items.item",
+    "fields": {
+      "notice_id": "idx",
+      "title": "title",
+      "org": "insttname",
+      "deadline": "enddate",
+      "source_url": "link01"
+    },
+    "original_hosts": [
+      "www.gojobs.go.kr"
+    ],
     "min_interval": 1,
     "review": {
-      "spec_url": null,
-      "rights_url": null,
-      "reviewed_at": null,
-      "redistribution_allowed": false,
-      "spec_verified": false
-    }
+      "spec_url": "https://www.data.go.kr/data/15156780/openapi.do",
+      "rights_url": "https://www.data.go.kr/data/15156780/openapi.do",
+      "reviewed_at": "2026-11-01",
+      "redistribution_allowed": true,
+      "spec_verified": true
+    },
+    "contract": "pbljob-v1",
+    "lookback_days": 90,
+    "original_url_template": "https://www.gojobs.go.kr/apmView.do?empmnsn={notice_id}"
   },
   "busan": {
     "enabled": false,
@@ -29,7 +42,9 @@
     "format": null,
     "items_path": null,
     "fields": {},
-    "original_hosts": ["www.busan.go.kr"],
+    "original_hosts": [
+      "www.busan.go.kr"
+    ],
     "min_interval": 2,
     "review": {
       "spec_url": null,

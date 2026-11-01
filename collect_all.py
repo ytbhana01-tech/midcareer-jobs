@@ -47,6 +47,8 @@ def merge(jobs,now=None):
         evidence=tuple(' '.join(unicodedata.normalize('NFKC',str(j.get(k) or '')).split())
                        for k in ('org','title','start','deadline'))
         keys=[('url',canonical_url(j['source_url']),evidence),('source',j['source_id'],j['notice_id'])]
+        if canonical_url(j.get('agency_url')):
+            keys.append(('url',canonical_url(j['agency_url']),evidence))
         if j.get('agency_id') and j.get('announcement_number'):
             keys.append(('announcement',j['agency_id'],j['announcement_number']))
         for key in keys:
@@ -79,6 +81,14 @@ def collect_alio():
     http=OfficialHTTP(hosts)
     verified=[j for j in records if http.original(j['source_url'])]
     return {'jobs':verified,'updated_at':feed['updated_at'],'mode':feed['source'],'originals_verified':True}
+
+
+def collect_nara(config):
+    collector=NaraCollector(config)
+    jobs=collector.collect()
+    return {'jobs':jobs,'updated_at':dt.datetime.now(KST).isoformat(timespec='seconds'),
+            'mode':'official-api','originals_verified':True,'stats':collector.stats,
+            'coverage':'최근 '+str(config['lookback_days'])+'일 등록 공고'}
 
 
 def legacy_snapshot(feed):
@@ -127,6 +137,8 @@ def run(config,previous,cache,collectors,now=None):
                           'updated_at':(chosen or {}).get('updated_at'),
                           'mode':(chosen or {}).get('mode'),
                           'originals_verified':bool((chosen or {}).get('originals_verified'))}
+        if (chosen or {}).get('coverage'):statuses[source]['coverage']=chosen['coverage']
+        if (chosen or {}).get('stats'):statuses[source]['stats']=chosen['stats']
         if status!='ok':statuses[source]['reason']='수집 실패 또는 검증 대기 · 이전 검증 시각의 데이터 유지'
     times=[s.get('updated_at') for s in statuses.values() if s.get('updated_at')]
     updated=max(times,key=lambda t:dt.datetime.fromisoformat(t)) if times else None
@@ -158,7 +170,7 @@ def main():
         cache_path=ROOT/'.collector-cache'/'source-feeds.json'
         cache=load(cache_path,{})
         def cached():raise SourceError('Offline snapshot validation')
-        runners={'alio':collect_alio,'nara':NaraCollector(config.get('nara',{})).collect,
+        runners={'alio':collect_alio,'nara':lambda:collect_nara(config.get('nara',{})),
                  'busan':BusanCollector(config.get('busan',{})).collect}
         if args.cached_only:runners={name:cached for name in SOURCE_NAMES}
         feed,snapshots=run(config,previous,cache,runners)
