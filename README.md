@@ -76,6 +76,8 @@ python smoke_ui.py
 
 ## Issue #1: 수집처 확장 (검증 대기 어댑터)
 
+2026-11-01 새 네트워크 적용 후의 실제 검증 근거와 남은 제약은 [수집처 검증 보고서](docs/source-validation-2026-11-01.md)를 확인하세요. 나라일터 공식 명세와 부산시 공식 RSS를 확인했으나, 두 출처의 게시 가능한 실제 수집은 아직 완료되지 않았습니다.
+
 자동 갱신 진입점은 `python collect_all.py`입니다. 기존 `collect.py`는 독립 ALIO 수집기로 유지합니다. 출처별 스냅샷을 `.collector-cache/source-feeds.json`에 보관하고 Actions cache로 다음 실행에 전달합니다. 한 출처가 실패하면 그 출처의 기존 데이터와 원래 수집 시각을 보존하며, 다른 출처의 갱신을 막지 않습니다. 성공한 빈 응답은 해당 출처만 비웁니다. 캐시가 없으면 체크인된 기존 ALIO 피드를 복구 기준으로 사용합니다. 캐시는 퇴거될 수 있으므로 장기 보관을 보장하지 않습니다.
 
 `python collect_all.py --cached-only`는 네트워크 없이 기존 ALIO 피드 마이그레이션과 UI를 검증합니다. 기존 421건을 보존하는 것을 확인했습니다. 새로 수집한 데이터가 아닙니다. 현재 공개 사이트의 ALIO 피드와 `main`은 이번 작업에서 변경하지 않습니다.
@@ -85,19 +87,18 @@ python smoke_ui.py
 | 출처 | 구현 | 실제 연결 검증 |
 | --- | --- | --- |
 | ALIO | 기존 목록·상세 수집기, 공개 조회 대체 모드, 독립 캐시 | 기존 공개 사이트 HTTP 200, 421건 확인 |
-| 나라일터 / 인사혁신처 (15156780) | 검토된 계약에 따라 JSON/XML을 읽는 독립 API 어댑터 | **비활성: 공식 명세·이용조건·키 확인 대기** |
-| 부산광역시 | 공식 RSS/Atom 또는 JSON API 어댑터, HTML 스크래핑 없음 | **비활성: 공식 피드/API 존재 여부와 재배포 규정 확인 대기** |
+| 나라일터 / 인사혁신처 (15156780) | 검토된 계약에 따라 JSON/XML을 읽는 독립 API 어댑터 | **비활성: 명세·이용조건 확인, 전용 키와 상세 API 연계 검증 대기** |
+| 부산광역시 | 공식 RSS/Atom 또는 JSON API 어댑터, HTML 스크래핑 없음 | **비활성: 공식 RSS 확인, 마감일·원문·robots·항목별 이용조건 검증 미충족** |
 
-환경 네트워크 정책이 `www.data.go.kr`, `apis.data.go.kr`, `www.busan.go.kr` 접근을 허용하지 않아 공식 명세, robots.txt, 이용약관을 확인하지 못했습니다. 세 도메인을 추가한 환경 설정 초안을 저장했습니다. 초안 저장은 현재 실행 환경의 정책 적용이나 게시를 뜻하지 않습니다. 새 데이터가 연결되었다고 주장하지 않으며 엔드포인트, 응답 필드, 부산 RSS 주소를 추측하지 않았습니다. `tests/fixtures`는 합성 계약 검증용 데이터이며 공식 응답 샘플이 아닙니다.
+새로 게시한 환경 정책이 현재 실행 환경에 적용된 것을 확인했습니다. `www.data.go.kr`, `apis.data.go.kr`, `www.busan.go.kr`에 실제 요청했으며, 이전 네트워크 차단 설명은 더 이상 현재 상태가 아닙니다. 단, 호스트 허용은 기관 서비스의 정상 응답이나 인증 승인을 보장하지 않습니다.
 
-### 활성화 절차
+### 활성화에 남은 작업
 
-1. 클라우드 환경 설정에서 저장된 네트워크 초안을 검토·저장하고 게시합니다. 기존 허용 도메인은 보존했습니다.
-2. [나라일터 데이터셋 15156780](https://www.data.go.kr/data/15156780/openapi.do)에서 정확한 HTTPS 요청 경로, 메서드, 파라미터, 응답 envelope·필드와 재배포 조건을 확인합니다. 현재 어댑터는 GET query 방식 JSON/XML API를 지원합니다. 실제 명세가 다르면 검증 후 어댑터를 맞춰야 합니다.
-3. 나라일터 활용신청이 필요한 경우 승인받은 **일반(Decoding) 키**를 저장소 **Settings → Secrets and variables → Actions → New repository secret → `NARA_API_KEY`**에 보관합니다. 키는 코드·`sources.json`·웹페이지에 넣지 않습니다. 이 클라우드 환경에는 해당 키가 없고, 연결된 앱의 Actions secret 이름 조회도 403이므로 GitHub에 이미 등록되어 있는지는 확인하지 못했습니다. 기존 ALIO 키를 나라일터로 보내지 않습니다.
-4. 부산시 [공식 채용정보 게시판](https://www.busan.go.kr/depart/jobgonji01)에서 **공식 지원 RSS/Atom/API**와 수집·재배포 허용 여부를 확인합니다. 지원 피드가 없거나 허용되지 않으면 부산시를 비활성으로 남깁니다. HTML 크롤링으로 대체하지 않습니다.
-5. 확인된 계약만 `sources.json`의 `endpoint`, `format`, 페이지·응답 경로, `fields`, `original_hosts`에 작성합니다. `fields`의 필수 canonical 키는 `notice_id`, `title`, `org`, `deadline`, `source_url`입니다. 선택 필드는 `start`, `type`, `education`, `career`, `region`, `qualifications`, `procedure`, `preference`, `agency_id`, `announcement_number`입니다. `agency_id`와 `announcement_number`는 출처 간 공통의 공식 기관코드·공고번호에만 매핑하며, API 내부 일련번호를 공식 공고번호로 간주하지 않습니다.
-6. 공식 명세 URL, 재배포 허용 근거 URL, 검토일을 `review`에 기록하고 `spec_verified`, `redistribution_allowed`를 명시적으로 `true`로 설정한 뒤 해당 출처만 활성화합니다. 실제 응답 샘플을 비밀정보 없이 fixture로 추가하고 수집·원문 접근·테스트를 재검증한 후 PR을 병합합니다.
+1. 나라일터 [공식 명세](https://www.data.go.kr/data/15156780/openapi.do)는 XML GET API `https://apis.data.go.kr/1760000/PblJobService/getList`와 상세 `/getItem`을 정의합니다. 내려받은 명세는 [docs/nara-api-reference.json](docs/nara-api-reference.json)에 보관했습니다. 이용허락범위는 제한 없음입니다.
+2. 현재 환경에는 `NARA_API_KEY`가 없습니다. 활용 승인을 받은 전용 일반(Decoding) 키를 클라우드 환경 및 GitHub Actions secret에 설정해야 합니다. 기존 ALIO 키를 전송하지 않습니다. 키 값은 채팅이나 코드에 넣지 않습니다.
+3. 나라일터 목록은 `idx`, `title`, `insttname`, `enddate`를 제공하지만 원문 URL은 상세의 `link01`/`link02`/`link03`에 있습니다. 기존 단일 목록 매핑만으로 활성화하지 말고, 실제 인증 응답을 확보한 뒤 상세 연계와 올바른 원문 선택을 구현·검증해야 합니다. `regdate`는 접수 시작일이 아니며 `type02`, `areacode`를 고용형태·지역명으로 그대로 게시하지 않습니다. 성공 코드 값과 필수 검색 인수의 실제 값도 아직 검증되지 않았습니다.
+4. 부산시 게시판이 직접 제공한 공식 RSS는 `https://www.busan.go.kr/depart/jobgonji01.rss`입니다. 실제 10건을 확인했지만 별도 마감일·기관 필드가 없고 링크가 모두 HTTP입니다. `pubDate`나 본문의 공고기간을 접수 마감일로 간주하지 않습니다. robots.txt는 401 보안 차단으로 확인할 수 없었습니다. [저작권 보호정책](https://www.busan.go.kr/cright)은 공공누리 표시별 조건 확인 또는 사전 협의를 요구하므로 일괄 재배포 허용으로 해석하지 않습니다. 이 조건들이 해결될 때까지 비활성을 유지합니다.
+5. 확인된 계약과 실제 비밀정보 없는 성공 응답 fixture가 준비된 뒤에만 `sources.json`의 필드 매핑·허용 호스트·검토 정보를 확정하고 활성화합니다. 현재 `tests/fixtures`는 합성 계약 데이터이며 공식 성공 응답이 아닙니다. 원문 접근·마감·출처별 실패 보존을 재검증한 후 병합해야 합니다.
 
 ### 날짜·원문·분류·중복 정책
 
