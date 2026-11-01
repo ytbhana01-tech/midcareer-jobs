@@ -6,6 +6,7 @@ import json
 import os
 import re
 import time
+import threading
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 from urllib.request import Request, build_opener
 from urllib.error import HTTPError
@@ -130,12 +131,14 @@ def sanitize_serialized(data):
 
 
 class OfficialHTTP:
-    """HTTPS only, explicit hosts, robots fail-closed, serial per-host rate limiting."""
+    """HTTPS only, explicit hosts, robots fail-closed, thread-safe per-host request intervals."""
     def __init__(self, hosts, min_interval=1.0):
         self.hosts = set(hosts)
         self.min_interval = max(1.0, float(min_interval))
         self.last = {}
         self.robots = {}
+        self.rate_locks = {host:threading.Lock() for host in self.hosts}
+        self.robots_lock = threading.Lock()
 
     def get(self, url, max_bytes=5_000_000, allow_credentials=False):
         if allow_credentials:
@@ -149,10 +152,13 @@ class OfficialHTTP:
         if not clean or urlsplit(clean).hostname not in self.hosts:
             raise SourceError('Unapproved request destination')
         host = urlsplit(clean).hostname
-        delay = self.min_interval - (time.monotonic()-self.last.get(host,0))
-        if delay > 0:
-            time.sleep(delay)
-        self.last[host] = time.monotonic()
+        # Reserve request starts under a host-specific lock; network I/O may
+        # overlap without permitting a burst from concurrent workers.
+        with self.rate_locks[host]:
+            delay = self.min_interval - (time.monotonic()-self.last.get(host,0))
+            if delay > 0:
+                time.sleep(delay)
+            self.last[host] = time.monotonic()
         try:
             request = Request(clean,headers={'User-Agent':USER_AGENT,'Accept':'application/json, application/xml, text/xml, text/html'})
             with build_opener(NoRedirect()).open(request,timeout=30) as response:
@@ -168,6 +174,10 @@ class OfficialHTTP:
             raise SourceError('Official source transport failed') from None
 
     def allowed(self, url):
+        with self.robots_lock:
+            return self._allowed_locked(url)
+
+    def _allowed_locked(self, url):
         p = urlsplit(url)
         origin = f'{p.scheme}://{p.netloc}'
         if origin not in self.robots:

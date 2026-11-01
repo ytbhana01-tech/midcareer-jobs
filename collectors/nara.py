@@ -182,10 +182,10 @@ class NaraCollector:
             if available:jobs.append(job)
             else:self.stats['missing_original']+=1
             if unmatched:self.stats['unmatched_original']+=1
-        # API requests remain serial on the API host. One worker checks public
-        # originals serially on the separate gojobs host, retaining each host's
-        # robots rules and minimum request interval while overlapping I/O.
-        with ThreadPoolExecutor(max_workers=1) as originals:
+        # The API remains serial. Bounded public-origin workers overlap slow
+        # responses; OfficialHTTP serializes request starts per host and caches
+        # robots safely, preserving the same minimum request interval.
+        with ThreadPoolExecutor(max_workers=4) as originals:
             for row in records:
                 deadline,_=closing(row.get('deadline'))
                 if not deadline or deadline<now.date().isoformat():
