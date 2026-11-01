@@ -1,56 +1,18 @@
-"""Bounded Actions-only contract probe; never persist credentials or request URLs."""
-import datetime as dt
-import json
-import os
-import sys
+"""Review the official public detail route without credentials."""
+import re
 import time
-import xml.etree.ElementTree as ET
-from pathlib import Path
-from urllib.parse import urlencode, unquote
-from urllib.request import Request, build_opener
+from urllib.request import urlopen, Request
 from urllib.error import HTTPError
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from collect import NoRedirect
-from collectors.common import sanitize_serialized
-
-out=Path('nara-validation');out.mkdir(exist_ok=True)
-key=os.environ.get('NARA_API_KEY','').strip()
-if not key:raise SystemExit('NARA_API_KEY is not available to this workflow')
-key=unquote(key)
-summary=[]
-for sort in ('desc','내림차순'):
-    params={'serviceKey':key,'pageNo':1,'numOfRows':2,'Pblanc_ty':'','Instt_se':'','Sort_order':sort,'Begin_de':(dt.date.today()-dt.timedelta(days=30)).isoformat(),'End_de':dt.date.today().isoformat()}
+cases=[
+('robots','https://www.gojobs.go.kr/robots.txt',None),
+('get','https://www.gojobs.go.kr/apmView.do?menuNo=401&empmnsn=289736&searchJobsecode=020&flag=U',None),
+('get-minimal','https://www.gojobs.go.kr/apmView.do?empmnsn=289736',None),
+('post','https://www.gojobs.go.kr/apmView.do',b'menuNo=401&empmnsn=289736&searchJobsecode=020&flag=U'),
+('bai','https://www.bai.go.kr/bai/notice/notification/detail?tabId=tab03&brdId=BAK_0003&postNo=1160',None)]
+for label,url,data in cases:
     try:
-        request=Request('https://apis.data.go.kr/1760000/PblJobService/getList?'+urlencode(params),headers={'User-Agent':'MidcareerJobsBot/1.0'})
-        with build_opener(NoRedirect()).open(request,timeout=40) as r:body=r.read(2_000_000);status=r.status
-    except HTTPError as e:body=e.read(100_000);status=e.code
-    except Exception:summary.append({'sort':sort,'transport_error':True});continue
-    if key.encode() in body or os.environ['NARA_API_KEY'].encode() in body:raise SystemExit('Credential reflection refused')
-    try:
-        root=ET.fromstring(body)
-        summary.append({'sort':sort,'http_status':status,'root':root.tag,'code':root.findtext('.//resultCode') or root.findtext('.//returnReasonCode'),'total':root.findtext('.//totalCount')})
-        if root.find('.//items/item') is not None:
-            (out/'list.xml').write_text(sanitize_serialized({'xml':body.decode('utf-8')}))
-            idx=root.findtext('.//items/item/idx')
-            time.sleep(1)
-            with build_opener(NoRedirect()).open('https://apis.data.go.kr/1760000/PblJobService/getItem?'+urlencode({'serviceKey':key,'idx':idx}),timeout=40) as r:detail=r.read(2_000_000)
-            if key.encode() in detail:raise SystemExit('Credential reflection refused')
-            (out/'detail.xml').write_text(sanitize_serialized({'xml':detail.decode('utf-8')}))
-            print('sample',sort,(out/'list.xml').read_text(),(out/'detail.xml').read_text())
-    except ET.ParseError:summary.append({'non_xml_response':True})
-    time.sleep(1)
-(out/'summary.json').write_text(sanitize_serialized(summary))
-print(json.dumps(summary,ensure_ascii=False))
-
-for sample in ('list.xml','detail.xml'):
-    if (out/sample).exists():print(sample, (out/sample).read_text())
-
-for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/apmList.do?menuNo=401','https://www.bai.go.kr/robots.txt','https://www.gojobs.go.kr/jsp/apm/apmListNew.js','https://www.gojobs.go.kr/apmView.do?menuNo=401&empmnsn=289736&flag=U'):
-    try:
-        with build_opener(NoRedirect()).open(Request(target,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=30) as r:
+        with urlopen(Request(url,data=data,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=20) as r:
             text=r.read(2_000_000).decode('utf-8',errors='replace')
-            import re
-            if 'apmView.do?' in target:print('detail-match', '감사교육원 기간제근로자(조리원) 신규채용' in text, text[text.find('<title>'):text.find('</title>')+8])
-            print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else [re.findall(r'<script[^>]+src=[^>]+>',text),*[text[max(0,m.start()-100):m.start()+900] for m in re.finditer('fn_apmView',text) if 'javascript:' not in text[max(0,m.start()-20):m.start()]]])
-    except Exception:print('original-review',target,'unavailable')
+            print(label,r.status,'matched:', '감사교육원 기간제근로자(조리원) 신규채용' in text,'title:',re.findall('<title>(.*?)</title>',text,re.S),text if label=='robots' else '')
+    except Exception as error:print(label,type(error).__name__,getattr(error,'code',None))
     time.sleep(1)
