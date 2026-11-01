@@ -44,6 +44,8 @@ python collect.py --public-preview
 
 이 모드의 피드는 `source: alio-public-preview`, `authenticated_api_verified: false`로 표시하며 웹페이지에서도 인증 API 연결 대기 상태를 알립니다. 원본 데이터가 없을 때 가상 공고를 만들지 않습니다.
 
+디자인만 배포할 때는 Actions의 `workflow_dispatch`에서 `reuse_published_feed`를 선택할 수 있습니다. main에서 현재 공개 피드를 검증해 그대로 사용하며 수집 시각을 바꾸거나 수집 캐시를 덮어쓰지 않습니다. 기본값은 꺼짐으로, 일반 main 갱신과 정기 일정은 기존 수집을 수행합니다.
+
 ## 분류와 마감 정책
 
 - 공무직: 원본 공고 제목 또는 고용형태에 `공무직`이 명시된 경우입니다. 공고 내 모든 직종이 공무직이라는 뜻은 아닙니다.
