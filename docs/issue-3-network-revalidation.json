@@ -1,0 +1,133 @@
+{
+  "checked_at": "2026-11-01T23:41:24+09:00",
+  "network_policy": {
+    "mode": "unrestricted",
+    "state": "enforced",
+    "observations_current": true
+  },
+  "requests": [
+    {
+      "url": "https://www.pen.go.kr/robots.txt",
+      "status": 200,
+      "final_url": "https://www.pen.go.kr/robots.txt",
+      "bytes": 1116,
+      "sha256": "0168267b7831eccef1b9d079683f7242dca7bf013896a851444b4cbb83eb6c8e"
+    },
+    {
+      "url": "https://www.pen.go.kr/main/na/ntt/selectNttList.do?bbsId=2364&mi=30367",
+      "status": 200,
+      "final_url": "https://www.pen.go.kr/main/na/ntt/selectNttList.do?bbsId=2364&mi=30367",
+      "bytes": 141113,
+      "sha256": "94e21fee305268d108786de4a0ce7b99cc7df5f0a5a3340ffaad6af2dce256ab"
+    },
+    {
+      "url": "https://www.pen.go.kr/main/cm/cntnts/cntntsView.do?cntntsId=458&mi=31512",
+      "status": 200,
+      "final_url": "https://www.pen.go.kr/main/cm/cntnts/cntntsView.do?cntntsId=458&mi=31512",
+      "bytes": 101283,
+      "sha256": "fe862640e4eba9bcf24de5ab594033f1c5671d4572b8f242a74384f707a352dc"
+    },
+    {
+      "url": "https://job.cleaneye.go.kr/robots.txt",
+      "error": "HTTP Error 503: Service Unavailable"
+    },
+    {
+      "url": "https://job.cleaneye.go.kr/",
+      "error": "HTTP Error 503: Service Unavailable"
+    },
+    {
+      "url": "https://www.cleaneye.go.kr/robots.txt",
+      "error": "HTTP Error 503: Service Unavailable"
+    },
+    {
+      "url": "https://www.busan.go.kr/robots.txt",
+      "error": "HTTP Error 401: Unauthorized"
+    },
+    {
+      "url": "https://www.busan.go.kr/depart/jobgonji01.rss",
+      "status": 200,
+      "final_url": "https://www.busan.go.kr/depart/jobgonji01.rss",
+      "bytes": 10114,
+      "sha256": "e9c88b9715d4b076217b2d5427788d6878c19b4396c877f6ba86fbcfe247b356"
+    },
+    {
+      "url": "https://ytbhana01-tech.github.io/midcareer-jobs/jobs.json",
+      "status": 200,
+      "final_url": "https://ytbhana01-tech.github.io/midcareer-jobs/jobs.json",
+      "bytes": 2586869,
+      "sha256": "df6a7a938871eb67fc8f51dc87c17708123c41cbd2798384375b3522c314be0d"
+    },
+    {
+      "url": "https://www.pen.go.kr/main/na/ntt/selectNttInfo.do?mi=30367&bbsId=2364&nttSn=1182942",
+      "status": 200,
+      "bytes": 128624,
+      "sha256": "835ab247a8daffee74a34bd580ab25720f5e84a3dc16efcc5c1c850f94b8551b"
+    },
+    {
+      "url": "https://www.pen.go.kr/main/na/ntt/selectNttInfo.do?mi=30367&bbsId=2364&nttSn=1182910",
+      "status": 200,
+      "bytes": 127680,
+      "sha256": "8940570d88f2f0d2fffb0838e0fec4b577337c22035b109f2d73cdd715fe6cb9"
+    },
+    {
+      "url": "https://www.pen.go.kr/main/na/ntt/selectNttInfo.do?mi=30367&bbsId=2364&nttSn=1182901",
+      "status": 200,
+      "bytes": 128261,
+      "sha256": "a3db7aa0adf31529b3b0fe0fb076ffc796e4c5dbebbea9dc3c3488642a8f3626"
+    },
+    {
+      "url": "https://cleaneye.go.kr/robots.txt",
+      "error": "HTTP Error 503: Service Unavailable"
+    },
+    {
+      "url": "https://www.job.cleaneye.go.kr/robots.txt",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "url": "https://job.cleaneye.go.kr/robots.txt",
+      "error": "HTTP Error 503: Service Unavailable"
+    }
+  ],
+  "busan_rss_items": 10,
+  "baseline": {
+    "jobs": 1178,
+    "sources": {
+      "alio": {
+        "name": "ALIO · 공공기관 경영정보 공개시스템",
+        "status": "ok",
+        "count": 422,
+        "updated_at": "2026-11-01T21:42:07+09:00",
+        "mode": "alio-public-preview",
+        "originals_verified": false
+      },
+      "nara": {
+        "name": "나라일터 · 인사혁신처",
+        "status": "ok",
+        "count": 757,
+        "updated_at": "2026-11-01T22:01:31+09:00",
+        "mode": "official-api",
+        "originals_verified": true,
+        "coverage": "최근 90일 등록 공고",
+        "stats": {
+          "listed": 7376,
+          "expired_or_invalid": 6617,
+          "details": 759,
+          "detail_mismatch": 0,
+          "unmatched_original": 2,
+          "missing_original": 2,
+          "published": 757
+        }
+      },
+      "busan": {
+        "name": "부산광역시",
+        "status": "disabled",
+        "count": 0,
+        "reason": "공식 명세·이용조건 확인 및 활성화 대기"
+      }
+    },
+    "sha256": "df6a7a938871eb67fc8f51dc87c17708123c41cbd2798384375b3522c314be0d"
+  },
+  "new_source_verified": false,
+  "additional_unique": null,
+  "fresh_alio_nara_collection_performed": false
+}

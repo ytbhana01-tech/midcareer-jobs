@@ -1,5 +1,7 @@
 # Issue #3 다음 작업 인계
 
+최신 상태: [새 환경 실제 접속 재검증](issue-3-network-revalidation.md). 새 환경은 인터넷 허용이 적용되었으며 부산교육청 목록·상세 접속까지 확인했다. 아래의 이전 환경 도메인 미적용 기록은 과거 상태다. 신규 출처는 권리·계약·원격 오류 검증이 남아 초안·병합 보류를 유지한다.
+
 ## 이어받을 작업과 권한
 
 - 저장소: `ytbhana01-tech/midcareer-jobs`, [Issue #3](https://github.com/ytbhana01-tech/midcareer-jobs/issues/3).
