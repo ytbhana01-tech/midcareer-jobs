@@ -2,17 +2,20 @@ name: Collect, test and deploy job listings
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 1,7 * * *'
 permissions:
   contents: read
 concurrency:
-  group: pages
+  group: pages-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,24 +27,52 @@ jobs:
         run: |
           python -m pip install -r requirements-dev.txt
           python -m playwright install --with-deps chromium
-      - name: Collect official list and detail data
+      - name: Restore independent source snapshots
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: .collector-cache
+          key: source-feeds-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: source-feeds-v1-
+      - name: Collect independent official sources
+        if: github.event_name != 'pull_request'
         env:
           ALIO_API_KEY: ${{ secrets.ALIO_API_KEY }}
           ALIO_BASE_URL: https://opendata.alio.go.kr
-        shell: bash
-        run: |
-          if ! python collect.py; then
-            echo '::warning::Authenticated API unavailable. Trying explicitly labelled ALIO public-query preview.'
-            if ! python collect.py --public-preview; then
-              echo '::warning::ALIO public query unavailable. Keeping the previously verified feed and original timestamp.'
-            fi
-          fi
+          NARA_API_KEY: ${{ secrets.NARA_API_KEY }}
+        run: python collect_all.py
+      - name: Validate legacy-feed migration without source requests
+        if: github.event_name == 'pull_request'
+        run: python collect_all.py --cached-only
+      - name: Require current Nara collection and retained ALIO data before merge
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: python scripts/validate_live.py
+      - name: Require a verified Nara snapshot for production
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: python scripts/validate_live.py --allow-cached
       - name: Browser tests and allowlisted static build
         run: python smoke_ui.py
+      - name: Save independent verified source snapshots
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: .collector-cache
+          key: source-feeds-v1-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Save live validation evidence
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-validation
+          path: |
+            jobs.json
+            live-validation.json
+          retention-days: 3
       - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
         with:
           path: dist
   deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
