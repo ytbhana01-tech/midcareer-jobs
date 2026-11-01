@@ -4,9 +4,8 @@ import datetime as dt
 import json
 import unicodedata
 from pathlib import Path
-from urllib.parse import urlsplit
 import collect as alio
-from collectors.common import KST, OfficialHTTP, SourceError, canonical_url, normalize, sanitize_serialized
+from collectors.common import KST, SourceError, canonical_url, normalize, sanitize_serialized
 from collectors.nara import NaraCollector
 from collectors.busan import BusanCollector
 
@@ -74,13 +73,9 @@ def collect_alio():
         feed=json.loads(alio.collect(True))
     now=dt.datetime.fromisoformat(feed['updated_at'])
     records=normalize(feed['jobs'],'alio',SOURCE_NAMES['alio'],now)
-    # Check originals without sending the ALIO key to any destination. The source
-    # snapshot is retained on unknown transport failure; known missing originals
-    # and robots-disallowed originals are excluded on a successful source update.
-    hosts={urlsplit(j['source_url']).hostname for j in records}
-    http=OfficialHTTP(hosts)
-    verified=[j for j in records if http.original(j['source_url'])]
-    return {'jobs':verified,'updated_at':feed['updated_at'],'mode':feed['source'],'originals_verified':True}
+    # Preserve collect.py's established list/detail validation and public-query
+    # fallback. Additional institution-site crawling must not break ALIO refresh.
+    return {'jobs':records,'updated_at':feed['updated_at'],'mode':feed['source'],'originals_verified':False}
 
 
 def collect_nara(config):

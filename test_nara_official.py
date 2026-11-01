@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from collectors.common import KST, SourceError, OfficialHTTP, normalize
 from collectors.nara import NaraCollector, plain, original_url
-from collect_all import merge
+from collect_all import merge, collect_alio
 
 ROOT=Path(__file__).parent
 NOW=dt.datetime(2026,11,1,12,tzinfo=KST)
@@ -117,6 +117,18 @@ class OfficialNaraTests(unittest.TestCase):
         http=OfficialHTTP(['www.gojobs.go.kr'])
         with patch.object(http,'allowed',return_value=True),patch.object(http,'get',return_value='<h1>공무직 &lt;조리원&gt; 채용</h1>'.encode()):
             self.assertTrue(http.original('https://www.gojobs.go.kr/test',expected_text=title))
+
+    def test_alio_keeps_the_existing_list_detail_fallback_without_extra_crawling(self):
+        record={'id':'7','title':'공무직 채용','org':'기관','deadline':'2026-11-09',
+                'source_url':'https://agency.go.kr/notice/7'}
+        feed={'jobs':[record],'updated_at':NOW.isoformat(),'source':'alio-public-preview'}
+        import collect
+        with patch('collect_all.alio.collect',side_effect=[collect.ApiError('API unavailable'),json.dumps(feed)] ) as collector:
+            snapshot=collect_alio()
+        self.assertEqual([c.args[0] for c in collector.call_args_list],[False,True])
+        self.assertEqual(snapshot['jobs'][0]['id'],'alio:7')
+        self.assertEqual(snapshot['jobs'][0]['source_url'],record['source_url'])
+        self.assertFalse(snapshot['originals_verified'])
 
     def test_verified_agency_alias_deduplicates_and_keeps_attribution(self):
         nara=self.collect()[0][0]
