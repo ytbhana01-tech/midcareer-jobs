@@ -40,3 +40,6 @@ for sort in ('DESC','내림차순'):
     time.sleep(1)
 (out/'summary.json').write_text(sanitize_serialized(summary))
 print(json.dumps(summary,ensure_ascii=False))
+
+for sample in ('list.xml','detail.xml'):
+    if (out/sample).exists():print(sample, (out/sample).read_text())
