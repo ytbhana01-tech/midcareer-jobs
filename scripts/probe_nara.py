@@ -1,4 +1,5 @@
 """Bounded Actions-only contract probe; never persist credentials or request URLs."""
+import datetime as dt
 import json
 import os
 import sys
@@ -17,8 +18,8 @@ key=os.environ.get('NARA_API_KEY','').strip()
 if not key:raise SystemExit('NARA_API_KEY is not available to this workflow')
 key=unquote(key)
 summary=[]
-for sort in ('DESC','내림차순'):
-    params={'serviceKey':key,'pageNo':1,'numOfRows':2,'Pblanc_ty':'e04','Instt_se':'','Sort_order':sort}
+for sort in ('desc','내림차순'):
+    params={'serviceKey':key,'pageNo':1,'numOfRows':2,'Pblanc_ty':'e04','Instt_se':'','Sort_order':sort,'Begin_de':(dt.date.today()-dt.timedelta(days=30)).isoformat(),'End_de':dt.date.today().isoformat()}
     try:
         request=Request('https://apis.data.go.kr/1760000/PblJobService/getList?'+urlencode(params),headers={'User-Agent':'MidcareerJobsBot/1.0'})
         with build_opener(NoRedirect()).open(request,timeout=40) as r:body=r.read(2_000_000);status=r.status
@@ -35,7 +36,7 @@ for sort in ('DESC','내림차순'):
             with build_opener(NoRedirect()).open('https://apis.data.go.kr/1760000/PblJobService/getItem?'+urlencode({'serviceKey':key,'idx':idx}),timeout=40) as r:detail=r.read(2_000_000)
             if key.encode() in detail:raise SystemExit('Credential reflection refused')
             (out/'detail.xml').write_text(sanitize_serialized({'xml':detail.decode('utf-8')}))
-            break
+            print('sample',sort,(out/'list.xml').read_text(),(out/'detail.xml').read_text())
     except ET.ParseError:summary.append({'non_xml_response':True})
     time.sleep(1)
 (out/'summary.json').write_text(sanitize_serialized(summary))
