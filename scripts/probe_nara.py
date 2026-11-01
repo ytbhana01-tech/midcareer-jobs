@@ -44,3 +44,12 @@ print(json.dumps(summary,ensure_ascii=False))
 
 for sample in ('list.xml','detail.xml'):
     if (out/sample).exists():print(sample, (out/sample).read_text())
+
+for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/apmList.do?menuNo=401','https://www.bai.go.kr/robots.txt'):
+    try:
+        with build_opener(NoRedirect()).open(Request(target,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=30) as r:
+            text=r.read(2_000_000).decode('utf-8',errors='replace')
+            import re
+            print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else re.findall(r'.{0,100}(?:apmView|nttId|293912|289736).{0,150}',text)[:8])
+    except Exception:print('original-review',target,'unavailable')
+    time.sleep(1)
