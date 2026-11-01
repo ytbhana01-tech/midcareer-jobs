@@ -7,3 +7,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+dist/
+jobs.json.tmp
+playwright-artifacts/

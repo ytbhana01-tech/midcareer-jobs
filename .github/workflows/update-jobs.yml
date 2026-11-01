@@ -1,28 +1,56 @@
-name: Update public job listings
+name: Collect, test and deploy job listings
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: "17 1,7 * * *"
+    - cron: '17 1,7 * * *'
 permissions:
-  contents: write
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
-  collect:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Collect public ALIO listings
+          python-version: '3.12'
+      - name: Collector and publishing tests
+        run: python -m unittest discover -v
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m playwright install --with-deps chromium
+      - name: Collect official list and detail data
         env:
           ALIO_API_KEY: ${{ secrets.ALIO_API_KEY }}
-        run: python collect.py
-      - name: Commit listing feed
+          ALIO_BASE_URL: https://opendata.alio.go.kr
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add jobs.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Refresh ALIO public job feed"
-            git push
+          if ! python collect.py; then
+            echo '::warning::Authenticated API unavailable. Trying explicitly labelled ALIO public-query preview.'
+            if ! python collect.py --public-preview; then
+              echo '::warning::ALIO public query unavailable. Keeping the previously verified feed and original timestamp.'
+            fi
           fi
+      - name: Browser tests and allowlisted static build
+        run: python smoke_ui.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
