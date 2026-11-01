@@ -19,7 +19,7 @@ if not key:raise SystemExit('NARA_API_KEY is not available to this workflow')
 key=unquote(key)
 summary=[]
 for sort in ('desc','내림차순'):
-    params={'serviceKey':key,'pageNo':1,'numOfRows':2,'Pblanc_ty':'e04','Instt_se':'','Sort_order':sort,'Begin_de':(dt.date.today()-dt.timedelta(days=30)).isoformat(),'End_de':dt.date.today().isoformat()}
+    params={'serviceKey':key,'pageNo':1,'numOfRows':2,'Pblanc_ty':'','Instt_se':'','Sort_order':sort,'Begin_de':(dt.date.today()-dt.timedelta(days=30)).isoformat(),'End_de':dt.date.today().isoformat()}
     try:
         request=Request('https://apis.data.go.kr/1760000/PblJobService/getList?'+urlencode(params),headers={'User-Agent':'MidcareerJobsBot/1.0'})
         with build_opener(NoRedirect()).open(request,timeout=40) as r:body=r.read(2_000_000);status=r.status
@@ -50,6 +50,6 @@ for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/a
         with build_opener(NoRedirect()).open(Request(target,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=30) as r:
             text=r.read(2_000_000).decode('utf-8',errors='replace')
             import re
-            print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else re.findall(r'.{0,100}(?:apmView|nttId|293912|289736).{0,150}',text)[:8])
+            print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else re.findall(r'(?:function fn_apmView|function fn_apmview)[\s\S]{0,1200}',text))
     except Exception:print('original-review',target,'unavailable')
     time.sleep(1)
