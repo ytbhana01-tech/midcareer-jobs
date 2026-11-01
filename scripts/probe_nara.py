@@ -45,7 +45,7 @@ print(json.dumps(summary,ensure_ascii=False))
 for sample in ('list.xml','detail.xml'):
     if (out/sample).exists():print(sample, (out/sample).read_text())
 
-for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/apmList.do?menuNo=401','https://www.bai.go.kr/robots.txt'):
+for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/apmList.do?menuNo=401','https://www.bai.go.kr/robots.txt','https://www.gojobs.go.kr/jsp/apm/apmListNew.js'):
     try:
         with build_opener(NoRedirect()).open(Request(target,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=30) as r:
             text=r.read(2_000_000).decode('utf-8',errors='replace')
