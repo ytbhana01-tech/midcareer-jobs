@@ -37,10 +37,12 @@ python -m scripts.audit_sources baseline.json --candidate candidate.json --outpu
 - `collect_all.py`: Actions 캐시가 없을 때 기존 다중 출처 피드의 primary 레코드를 출처별 원래 시각으로 복구. 기존 코드는 ALIO만 복구해 나라일터 장애와 캐시 유실이 겹치면 나라일터 데이터가 사라질 수 있었다. attribution만 있는 공고에는 전체 자격 증거가 없으므로 다른 출처 내용을 복사해 별도 공고를 만들지 않는다. 캐시가 있으면 캐시가 우선이다. 로컬에 없는 운영 피드를 자동 다운로드하는 기능은 추가하지 않았다.
 - 단위 테스트 **63개 통과**. 캐시 유실+출처 장애 시 기존 ALIO/나라일터와 각 시각 보존, 원문 중복, 같은 제목의 다른 공고 보존, 마감 제외를 검증했다.
 - 운영 피드 1,178건을 로컬에 일시 주입해 기존 브라우저 검증을 실행했다. 검색·출처 필터·상세·attribution·320/390/768/1440px·KST 마감·XSS·장애 상태 통과, 페이지 오류 0건. 작업 후 체크인된 jobs.json 원본을 복원했다.
-- 운영 main의 신규 배포나 신규 수집 성공 Actions 실행은 아직 없다. PR CI 결과는 PR의 Checks에서 확인한다.
+- [PR #4 CI](https://github.com/ytbhana01-tech/midcareer-jobs/actions/runs/41316187043)는 커밋 `a7175078241a159bbca7ab238d9131c13401ba77`에서 build 성공(43초), deploy 건너뜀으로 완료됐다. 운영 main의 신규 배포나 신규 수집 성공 Actions 실행은 아직 없다.
 
 ## 이어서 필요한 검증
 
-현 클라우드 환경은 data.go.kr, apis.data.go.kr, 부산시, ALIO, 운영 Pages와 GitHub를 허용하지만 교육청·클린아이·나라일터 원문 도메인은 허용 목록에 없다. 환경 설정 적용을 요청했으며 우회하지 않는다. 이 세션에는 NARA_API_KEY가 주입되지 않았고 기존 Actions secret을 읽거나 다른 출처로 ALIO 키를 전달하지 않는다.
+사용자는 요청한 7개 도메인을 환경 설정에 추가하고 **저장·게시 완료**했다고 확인했다. 그러나 이 작업의 실행 환경을 재조회한 결과는 여전히 `spec_revision=1`, `observed_spec_revision=1`, `observations_current=true`, 네트워크 정책 `enforced`이며, 도구 결과와 `/etc/codex/network-policy.json` 모두 7개 도메인이 없다. 게시된 설정이 기존 실행 인스턴스에 반영됐다고 주장하지 않는다. 사용자가 다음 작업의 새 환경에서 남은 검증을 이어가도록 정리하라고 지시했으므로 현재 세션의 환경 재생성이나 추가 설정 승인을 요청하지 않는다.
+
+현재 환경은 data.go.kr, apis.data.go.kr, 부산시, ALIO, 운영 Pages와 GitHub를 허용한다. 이 세션에는 NARA_API_KEY가 주입되지 않았고 기존 Actions secret을 읽거나 다른 출처로 ALIO 키를 전달하지 않는다. 새 실행 환경에서 정책 적용 상태부터 확인한다. 상세 인계는 [다음 작업 재개 절차](issue-3-handoff.md)에 기록했다.
 
 공식 채용 API/피드 확인 → robots와 개별 이용권리 확인 → 비밀정보 없는 응답 fixture → 독립 어댑터 → 실행 시간 상한·요청 간격·상세 캐시 → 기존 운영 기준선과 고유 수 비교 → 브랜치의 실제 수집 및 브라우저 검증 → 검증된 출처만 활성화·병합·Pages 배포 순서로 진행한다. 키 신청은 해당 API 계약과 필요성이 확인된 후에만 요청한다. 담당자 연락이나 이용 허락 신청은 사용자 지시 없이 보내지 않는다.
