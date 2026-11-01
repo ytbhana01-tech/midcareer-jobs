@@ -45,11 +45,12 @@ print(json.dumps(summary,ensure_ascii=False))
 for sample in ('list.xml','detail.xml'):
     if (out/sample).exists():print(sample, (out/sample).read_text())
 
-for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/apmList.do?menuNo=401','https://www.bai.go.kr/robots.txt','https://www.gojobs.go.kr/jsp/apm/apmListNew.js'):
+for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/apmList.do?menuNo=401','https://www.bai.go.kr/robots.txt','https://www.gojobs.go.kr/jsp/apm/apmListNew.js','https://www.gojobs.go.kr/apmView.do?menuNo=401&empmnsn=289736&flag=U'):
     try:
         with build_opener(NoRedirect()).open(Request(target,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=30) as r:
             text=r.read(2_000_000).decode('utf-8',errors='replace')
             import re
+            if 'apmView.do?' in target:print('detail-match', '감사교육원 기간제근로자(조리원) 신규채용' in text, text[text.find('<title>'):text.find('</title>')+8])
             print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else [re.findall(r'<script[^>]+src=[^>]+>',text),*[text[max(0,m.start()-100):m.start()+900] for m in re.finditer('fn_apmView',text) if 'javascript:' not in text[max(0,m.start()-20):m.start()]]])
     except Exception:print('original-review',target,'unavailable')
     time.sleep(1)
