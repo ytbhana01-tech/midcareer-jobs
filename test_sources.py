@@ -162,6 +162,17 @@ class CollectionTests(unittest.TestCase):
         for url in ['https://evil.invalid/api','http://www.busan.go.kr/api']:
             with self.assertRaises(SourceError):http.get(url)
 
+    def test_api_credentials_are_scoped_and_never_allowed_on_originals(self):
+        http=OfficialHTTP(['apis.data.go.kr','agency.go.kr'])
+        response=Mock();response.status=200;response.read.return_value=b'{}'
+        opener=Mock();opener.open.return_value.__enter__=Mock(return_value=response)
+        opener.open.return_value.__exit__=Mock(return_value=False)
+        with patch('collectors.common.build_opener',return_value=opener):
+            self.assertEqual(http.get('https://apis.data.go.kr/test?serviceKey=synthetic',allow_credentials=True),b'{}')
+            with self.assertRaises(SourceError):http.get('https://agency.go.kr/test?serviceKey=synthetic',allow_credentials=True)
+            with self.assertRaises(SourceError):http.get('https://apis.data.go.kr/test?serviceKey=synthetic')
+            with self.assertRaises(SourceError):http.get('https://user:synthetic@apis.data.go.kr/test',allow_credentials=True)
+
     def test_rate_limit_applies_before_request(self):
         http=OfficialHTTP(['agency.go.kr'],min_interval=2)
         http.last['agency.go.kr']=9

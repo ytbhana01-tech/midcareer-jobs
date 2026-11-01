@@ -135,8 +135,15 @@ class OfficialHTTP:
         self.last = {}
         self.robots = {}
 
-    def get(self, url, max_bytes=5_000_000):
-        clean = safe_url(url)
+    def get(self, url, max_bytes=5_000_000, allow_credentials=False):
+        if allow_credentials:
+            parts=urlsplit(url)
+            base=urlunsplit((parts.scheme,parts.netloc,parts.path,'',''))
+            if parts.hostname!='apis.data.go.kr' or not safe_url(base) or re.search(r'[\x00-\x20]',url):
+                raise SourceError('Credentials may only target the approved government API host')
+            clean=url
+        else:
+            clean = safe_url(url)
         if not clean or urlsplit(clean).hostname not in self.hosts:
             raise SourceError('Unapproved request destination')
         host = urlsplit(clean).hostname

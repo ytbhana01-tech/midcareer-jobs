@@ -89,7 +89,7 @@ class NaraCollector:
         records=[];expected=None
         for page in range(1,101):
             params={**c.get('params',{}),c['key_parameter']:key,c['page_parameter']:page,c['size_parameter']:100}
-            data=self.http.get(c['endpoint']+'?'+urlencode(params))
+            data=self.http.get(c['endpoint']+'?'+urlencode(params),allow_credentials=True)
             rows,total=parse_page(data,c)
             if expected is None:expected=total
             if total!=expected:

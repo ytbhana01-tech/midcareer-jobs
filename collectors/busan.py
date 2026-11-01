@@ -20,7 +20,8 @@ def parse_feed(data, config):
             for key,field in config['fields'].items():
                 if not field:continue
                 # Feed contract can use an explicit attribute (e.g. Atom link@href).
-                path,sep,attr=field.partition('@')
+                path,sep,attr=field.rpartition('@')
+                if not sep:path=field
                 node=entry.find(path,namespaces)
                 row[key]=(node.get(attr) if sep else ''.join(node.itertext()).strip()) if node is not None else None
             rows.append(row)
