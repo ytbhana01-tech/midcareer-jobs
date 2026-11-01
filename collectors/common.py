@@ -198,9 +198,10 @@ class OfficialHTTP:
                 return False
             raise
         if expected_text:
-            text=html.unescape(html.unescape(body.decode('utf-8',errors='replace')))
-            text=' '.join(re.sub(r'<[^>]+>',' ',text).split())
-            if ' '.join(expected_text.split()) not in text:return False
+            text=re.sub(r'<[^>]+>',' ',body.decode('utf-8',errors='replace'))
+            text=' '.join(html.unescape(html.unescape(text)).split())
+            if ' '.join(expected_text.split()) not in text:
+                raise SourceError('Original content did not match verified notice')
         return bool(body.strip())
 
 

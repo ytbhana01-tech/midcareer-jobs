@@ -1,7 +1,6 @@
-"""나라일터 adapter for dataset 15156780. Mapping MUST come from reviewed official docs.
+"""나라일터 official XML list/detail collector and reviewed-contract parsers.
 
-No endpoint or vendor field names are guessed. Disabled until the official contract,
-permission and credential have been confirmed. JSON/XML envelope paths are configurable.
+Production uses dataset 15156780 and credential-free official notice pages.
 """
 import datetime as dt
 import html
@@ -153,7 +152,7 @@ class NaraCollector:
                 'Begin_de':(now.date()-dt.timedelta(days=days)).isoformat(),
                 'End_de':now.date().isoformat(),'numOfRows':100}
         records=[];expected=None;seen=set()
-        self.stats={'listed':0,'expired_or_invalid':0,'details':0,'missing_original':0,'published':0}
+        self.stats={'listed':0,'expired_or_invalid':0,'details':0,'detail_mismatch':0,'unmatched_original':0,'missing_original':0,'published':0}
         for page in range(1,501):
             root,data=self.api('getList',{**params,'pageNo':page})
             rows,total=parse_page(data,c)
@@ -186,13 +185,14 @@ class NaraCollector:
             detail=xml_value(node)
             # Historical API records can reuse an idx across notice types.
             # An idx match alone does not establish that this is the same job.
-            for key,field in [('notice_id','idx'),('title','title'),('org','insttname'),('deadline','enddate')]:
-                if plain(row.get(key))!=plain(detail.get(field)):
-                    raise SourceError('Nara list/detail identity mismatch')
+            identity=[('notice_id','idx'),('title','title'),('org','insttname'),('deadline','enddate')]
+            if any(label(row.get(key))!=label(detail.get(field)) for key,field in identity):
+                self.stats['detail_mismatch']+=1
+                continue
             self.stats['details']+=1
             if self.stats['details']%50==0:print('Nara details verified: '+str(self.stats['details']),flush=True)
-            row.update(title=plain(row['title']),org=plain(row['org']),
-                       description=plain(detail.get('contents')),region=plain(detail.get('areaname')))
+            row.update(title=label(row['title']),org=label(row['org']),
+                       description=plain(detail.get('contents')),region=label(detail.get('areaname')))
             candidate=html.unescape(html.unescape(str(detail.get('link01') or '').strip()))
             if candidate and '://' not in candidate and not candidate.startswith(('/',':')):candidate='https://'+candidate
             row['agency_url']=canonical_url(candidate)
@@ -213,11 +213,17 @@ class NaraCollector:
                 try:
                     available=self.http.original(normalized[0]['source_url'],expected_text=row['title'])
                     break
-                except SourceError:
+                except SourceError as error:
+                    if str(error)=='Original content did not match verified notice':
+                        self.stats['unmatched_original']+=1
+                        available=False
+                        break
                     if attempt==2:raise
                     time.sleep(2**attempt)
             if available:jobs.extend(normalized)
             else:self.stats['missing_original']+=1
+        if not jobs and (self.stats['detail_mismatch'] or self.stats['unmatched_original']):
+            raise SourceError('No verified Nara notices; previous snapshot preserved')
         self.stats['published']=len(jobs)
         return jobs
 
@@ -233,6 +239,11 @@ class TextOnly(HTMLParser):
         if tag in ('p','div','li','tr'):self.parts.append('\n')
     def handle_data(self,data):
         if not self.hidden:self.parts.append(data)
+
+
+def label(value):
+    # Titles may contain literal <...>; only body markup is parsed as HTML.
+    return ' '.join(html.unescape(html.unescape(str(value or ''))).split())
 
 
 def plain(value):

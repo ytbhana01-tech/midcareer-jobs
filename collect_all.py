@@ -129,7 +129,18 @@ def run(config,previous,cache,collectors,now=None):
             # Per-source snapshot is committed only after a successful full run.
             sanitize_serialized(fresh)
             snapshots[source]=fresh;chosen=fresh;status='ok'
-        except Exception:
+        except Exception as error:
+            # Log only fixed diagnostic codes, never arbitrary exception text.
+            codes={'Nara list/detail identity mismatch':'detail_identity_mismatch',
+                   'Official source transport failed':'transport_failed',
+                   'Official source HTTP request failed':'http_failed',
+                   'Original content did not match verified notice':'original_content_mismatch',
+                   'Official Nara API rejected request':'api_rejected',
+                   'Missing Nara detail':'detail_missing',
+                   'No verified Nara notices; previous snapshot preserved':'no_verified_notices',
+                   'Nara API pagination changed; retry collection':'pagination_changed',
+                   'Duplicate/missing Nara notice ID':'duplicate_notice_id'}
+            print(json.dumps({'source':source,'error_code':codes.get(str(error),'source_failed')}),flush=True)
             chosen=old;status='cached' if old else 'unavailable'
         jobs=[j for j in (chosen or {}).get('jobs',[]) if current(j,now)]
         all_jobs.extend(jobs)

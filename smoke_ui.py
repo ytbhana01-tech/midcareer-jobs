@@ -36,7 +36,10 @@ def main():
             page.goto(base)
             expect(page.locator('.job').first).to_be_visible()
             assert int(page.locator('#total-stat').inner_text().replace(',','')) > 0
-            assert '인증 API' in page.locator('#feed-notice').inner_text() or '목록·상세 API' in page.locator('#feed-notice').inner_text()
+            if snapshot.get('sources'):
+                expect(page.locator('#feed-notice')).to_contain_text('나라일터:')
+            else:
+                assert '인증 API' in page.locator('#feed-notice').inner_text() or '목록·상세 API' in page.locator('#feed-notice').inner_text()
             page.locator('[data-detail]').first.click()
             assert page.locator('#detail').evaluate('(d)=>d.open')
             assert page.locator('#detail-content').inner_text()
@@ -76,7 +79,8 @@ def main():
                 expect(page.locator('.job').first).to_be_visible()
                 expect(page.locator('.job h3').first).to_have_text(sample['title'])
                 expect(page.locator('.source-attribution').first).to_contain_text('나라일터')
-                page.locator('[data-detail]').first.click()
+                page.locator(f'[data-detail="{sample["id"]}"]').click()
+                expect(page.locator('#detail-title')).to_have_text(sample['title'])
                 expect(page.locator('#detail-facts')).to_contain_text('나라일터')
                 assert page.locator('#detail-source').get_attribute('href').startswith('https://')
                 if sample.get('description'):expect(page.locator('#detail-content')).to_contain_text(sample['description'])

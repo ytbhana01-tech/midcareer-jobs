@@ -86,6 +86,8 @@ function feedStatus(){
       if(!pending&&status.mode==='alio-public-preview')label+=' · 공개 조회, 인증 API 미검증';
       if(!pending&&!status.originals_verified)label+=' · 원문 재검증 대기';
       if(status.coverage&&!pending)label+=' · '+status.coverage;
+      const rejected=(status.stats?.detail_mismatch||0)+(status.stats?.unmatched_original||0);
+      if(rejected)label+=` · 불일치 제외 ${rejected}건`;
       return `${name}: ${label}`;
     });
     $('feed-notice').textContent=messages.join(' / ')+' · 종료된 공고는 자동 제외됩니다.';

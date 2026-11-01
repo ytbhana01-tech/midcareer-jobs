@@ -6,7 +6,7 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import Mock, patch
-from collectors.common import KST, SourceError, normalize
+from collectors.common import KST, SourceError, OfficialHTTP, normalize
 from collectors.nara import NaraCollector, plain, original_url
 from collect_all import merge
 
@@ -64,6 +64,19 @@ class OfficialNaraTests(unittest.TestCase):
         with patch.dict('os.environ',{'NARA_API_KEY':'synthetic-key'}):
             with self.assertRaises(SourceError):NaraCollector(self.config,self.http).collect()
 
+    def test_one_inconsistent_record_does_not_remove_other_verified_jobs(self):
+        item=copy.deepcopy(self.list.findall('body/items/item')[0])
+        item.find('idx').text='999999'
+        self.list.find('body/items').append(item)
+        self.list.find('body/totalCount').text='3'
+        self.http.get.side_effect=[ET.tostring(self.list),self.detail,self.detail]
+        collector=NaraCollector(self.config,self.http)
+        with patch.dict('os.environ',{'NARA_API_KEY':'synthetic-key'}),patch('collectors.nara.dt.datetime',Clock):
+            result=collector.collect()
+        self.assertEqual([j['id'] for j in result],['nara:289736'])
+        self.assertEqual(collector.stats['detail_mismatch'],1)
+        self.assertEqual(collector.stats['published'],1)
+
     def test_credential_reflection_and_original_failure_fail_closed(self):
         with self.assertRaises(SourceError):self.collect(self.detail.replace(b'NORMAL SERVICE.',b'synthetic-key'))
         self.http.original.side_effect=SourceError('Official source transport failed')
@@ -84,6 +97,26 @@ class OfficialNaraTests(unittest.TestCase):
         self.assertIsNone(original_url('http://www.gojobs.go.kr/old',['www.gojobs.go.kr']))
         self.assertIsNone(original_url('https://other.example/notice',['www.gojobs.go.kr']))
         self.assertEqual(original_url('www.gojobs.go.kr/x?a=1&amp;amp;b=2',['www.gojobs.go.kr']),'https://www.gojobs.go.kr/x?a=1&b=2')
+
+    def test_original_200_must_contain_the_expected_notice(self):
+        http=OfficialHTTP(['www.gojobs.go.kr'])
+        with patch.object(http,'allowed',return_value=True),patch.object(http,'get',return_value=b'<html><h1>Different notice</h1></html>'):
+            with self.assertRaises(SourceError):http.original('https://www.gojobs.go.kr/test',expected_text='Expected notice')
+        with patch.object(http,'allowed',return_value=True),patch.object(http,'get',return_value=b'<html><h1>Expected &amp; notice</h1></html>'):
+            self.assertTrue(http.original('https://www.gojobs.go.kr/test',expected_text='Expected & notice'))
+
+    def test_literal_title_angles_and_undocumented_begin_date(self):
+        title='공무직 <조리원> 채용'
+        self.list.findall('body/items/item')[0].find('title').text=title
+        detail=ET.fromstring(self.detail)
+        detail.find('body/item/title').text=title
+        detail.find('body/item/begindate').text='20261105'
+        jobs,_=self.collect(ET.tostring(detail))
+        self.assertEqual(jobs[0]['title'],title)
+        self.assertIsNone(jobs[0]['start'])
+        http=OfficialHTTP(['www.gojobs.go.kr'])
+        with patch.object(http,'allowed',return_value=True),patch.object(http,'get',return_value='<h1>공무직 &lt;조리원&gt; 채용</h1>'.encode()):
+            self.assertTrue(http.original('https://www.gojobs.go.kr/test',expected_text=title))
 
     def test_verified_agency_alias_deduplicates_and_keeps_attribution(self):
         nara=self.collect()[0][0]
