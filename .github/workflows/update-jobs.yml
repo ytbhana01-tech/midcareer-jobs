@@ -5,6 +5,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      reuse_published_feed:
+        description: '디자인만 배포: 현재 공개 피드와 기존 수집 시각 사용'
+        type: boolean
+        required: false
+        default: false
   schedule:
     - cron: '17 1,7 * * *'
 permissions:
@@ -27,15 +33,18 @@ jobs:
         run: |
           python -m pip install -r requirements-dev.txt
           python -m playwright install --with-deps chromium
+      - name: Reuse public feed for a design-only release
+        if: github.ref == 'refs/heads/main' && inputs.reuse_published_feed
+        run: python scripts/reuse_published_feed.py
       - name: Restore independent source snapshots
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && !(github.ref == 'refs/heads/main' && inputs.reuse_published_feed)
         uses: actions/cache/restore@v4
         with:
           path: .collector-cache
           key: source-feeds-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: source-feeds-v1-
       - name: Collect independent official sources
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && !(github.ref == 'refs/heads/main' && inputs.reuse_published_feed)
         env:
           ALIO_API_KEY: ${{ secrets.ALIO_API_KEY }}
           ALIO_BASE_URL: https://opendata.alio.go.kr
@@ -53,7 +62,7 @@ jobs:
       - name: Browser tests and allowlisted static build
         run: python smoke_ui.py
       - name: Save independent verified source snapshots
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.reuse_published_feed
         uses: actions/cache/save@v4
         with:
           path: .collector-cache
