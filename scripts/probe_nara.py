@@ -50,6 +50,6 @@ for target in ('https://www.gojobs.go.kr/robots.txt','https://www.gojobs.go.kr/a
         with build_opener(NoRedirect()).open(Request(target,headers={'User-Agent':'MidcareerJobsBot/1.0'}),timeout=30) as r:
             text=r.read(2_000_000).decode('utf-8',errors='replace')
             import re
-            print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else re.findall(r'(?:function fn_apmView|function fn_apmview)[\s\S]{0,1200}',text))
+            print('original-review',target,r.status, text[:300] if target.endswith('robots.txt') else [re.findall(r'<script[^>]+src=[^>]+>',text),*[text[max(0,m.start()-100):m.start()+900] for m in re.finditer('fn_apmView',text) if 'javascript:' not in text[max(0,m.start()-20):m.start()]]])
     except Exception:print('original-review',target,'unavailable')
     time.sleep(1)
