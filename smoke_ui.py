@@ -126,7 +126,7 @@ def main():
                 'nara':{'status':'ok','mode':'official-api','updated_at':fixture['updated_at'],'originals_verified':True},
                 'busan':{'status':'disabled'}}
             nara={'id':'nara:1','notice_id':'1','source_id':'nara','title':'기간제 공고',
-                  'org':'테스트 기관','region':'부산','type':'기간제','education':'','career':'',
+                  'org':'테스트 기관','region':'부산','type':'','education':'','career':'',
                   'tags':['기간제'],'employment_types':['기간제'],'deadline':'2026-11-02',
                   'closes_at':'2026-11-02T13:00:00+09:00','source_url':'https://example.org/nara/1'}
             nara['attributions']=[{'source_id':'nara'},{'source_id':'alio'}]
@@ -141,6 +141,8 @@ def main():
             page.locator('#source').select_option('nara')
             expect(page.locator('.job')).to_have_count(1)
             expect(page.locator('.source-attribution')).to_contain_text('나라일터')
+            page.locator('#employment').select_option('unknown')
+            expect(page.locator('.job')).to_have_count(0)  # Explicit title classification is known.
             page.locator('#employment').select_option('기간제')
             expect(page.locator('.job')).to_have_count(1)
             page.locator('[data-detail]').first.click()

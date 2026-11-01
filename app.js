@@ -19,7 +19,7 @@ function matches(j,filters) {
   if(filters.region&&!String(j.region).split(',').map(x=>x.trim()).includes(filters.region))return false;
   const employment=filters.employment;
   if(employment==='focus'&&!hasTag(j,'공무직')&&!hasTag(j,'무기계약직'))return false;
-  if(employment==='unknown'&&j.type)return false;
+  if(employment==='unknown'&&employmentTypes(j).length)return false;
   if(employment&&!['focus','unknown'].includes(employment)){
     if(['공무직','무기계약직','기간제','기타'].includes(employment)){if(!employmentTypes(j).includes(employment))return false;}
     else if(!String(j.type).split(',').map(x=>x.trim()).includes(employment))return false;
@@ -56,7 +56,7 @@ function detail(id){
     const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value||'미확인';$('detail-facts').append(dt,dd);
   }
   $('detail-content').replaceChildren();
-  for(const [title,value] of [['공고 내용',j.description],['지원 자격',j.qualifications],['전형 절차',j.procedure],['우대 조건',j.preference]]){
+  for(const [title,value] of [...(j.description?[['공고 내용',j.description]]:[]),['지원 자격',j.qualifications],['전형 절차',j.procedure],['우대 조건',j.preference]]){
     const h=document.createElement('h3'),p=document.createElement('p');h.textContent=title;p.textContent=value||'출처에서 확인되지 않았습니다. 공고 원문을 확인해 주세요.';$('detail-content').append(h,p);
   }
   $('detail-source').href=safeURL(j.source_url);$('detail').showModal();$('detail').scrollTop=0;
