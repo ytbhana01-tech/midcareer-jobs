@@ -174,61 +174,71 @@ class NaraCollector:
         else:raise SourceError('Nara pagination limit exceeded')
         self.stats['listed']=len(records)
         print('Nara API listing pages verified: '+str(len(records)),flush=True)
-        jobs=[];pending=deque()
-        active=sum(bool((day:=closing(row.get('deadline'))[0]) and day>=now.date().isoformat()) for row in records)
-        print('Nara active candidates: '+str(active),flush=True)
+        jobs=[];pending=deque();details_pending=deque()
+        candidates=[row for row in records if (day:=closing(row.get('deadline'))[0]) and day>=now.date().isoformat()]
+        self.stats['expired_or_invalid']=len(records)-len(candidates)
+        print('Nara active candidates: '+str(len(candidates)),flush=True)
         def finish_original():
             job,available,unmatched=pending.popleft().result()
             if available:jobs.append(job)
             else:self.stats['missing_original']+=1
             if unmatched:self.stats['unmatched_original']+=1
-        # The API remains serial. Bounded public-origin workers overlap slow
-        # responses; OfficialHTTP serializes request starts per host and caches
-        # robots safely, preserving the same minimum request interval.
-        with ThreadPoolExecutor(max_workers=4) as originals:
-            for row in records:
-                deadline,_=closing(row.get('deadline'))
-                if not deadline or deadline<now.date().isoformat():
-                    self.stats['expired_or_invalid']+=1;continue
-                ident=str(row['notice_id'])
-                if not re.fullmatch(r'[0-9]+',ident):raise SourceError('Invalid Nara notice ID')
-                root,_=self.api('getItem',{'idx':ident})
-                node=root.find('body/item')
-                if node is None:raise SourceError('Missing Nara detail')
-                detail=xml_value(node)
-                # Historical API records can reuse an idx across notice types.
-                # An idx match alone does not establish that this is the same job.
-                identity=[('notice_id','idx'),('title','title'),('org','insttname'),('deadline','enddate')]
-                if any(label(row.get(key))!=label(detail.get(field)) for key,field in identity):
-                    self.stats['detail_mismatch']+=1
-                    continue
-                self.stats['details']+=1
-                if self.stats['details']%50==0:print('Nara details verified: '+str(self.stats['details']),flush=True)
-                row.update(title=label(row['title']),org=label(row['org']),
-                           description=plain(detail.get('contents')),region=label(detail.get('areaname')))
-                candidate=html.unescape(html.unescape(str(detail.get('link01') or '').strip()))
-                if candidate and '://' not in candidate and not candidate.startswith(('/',':')):candidate='https://'+candidate
-                row['agency_url']=canonical_url(candidate)
-                # regdate is a publication date, never an application opening date.
-                row['published_date']=closing(detail.get('regdate'))[0]
-                # begindate is undocumented and live samples disagree with the
-                # explicit application period in contents; do not invent a start.
-                row['start']=None
-                template=c.get('original_url_template')
-                if template:
-                    row['source_url']=template.format(notice_id=ident)
-                else:
-                    row['source_url']=next((url for field in ('link01','link02','link03')
-                        if (url:=original_url(detail.get(field),c['original_hosts']))),None)
-                normalized=normalize([row],self.source_id,self.source_name,now)
-                if not normalized:continue
-                pending.append(originals.submit(self.verify_original,normalized[0]))
+        def finish_detail():
+            job,matched=details_pending.popleft().result()
+            if not matched:
+                self.stats['detail_mismatch']+=1
+                return
+            self.stats['details']+=1
+            if self.stats['details']%50==0:print('Nara details verified: '+str(self.stats['details']),flush=True)
+            if job:
+                pending.append(originals.submit(self.verify_original,job))
                 if len(pending)>=4:finish_original()
+        # Both hosts have bounded response concurrency. The shared HTTP client
+        # locks request starts per host, retaining robots and minimum intervals.
+        # Results and counters are committed in input order on this thread.
+        with ThreadPoolExecutor(max_workers=4) as details, ThreadPoolExecutor(max_workers=4) as originals:
+            for row in candidates:
+                details_pending.append(details.submit(self.prepare_job,row,now))
+                if len(details_pending)>=8:finish_detail()
+            while details_pending:finish_detail()
             while pending:finish_original()
         if not jobs and (self.stats['detail_mismatch'] or self.stats['unmatched_original']):
             raise SourceError('No verified Nara notices; previous snapshot preserved')
         self.stats['published']=len(jobs)
         return jobs
+
+    def prepare_job(self,row,now):
+        c=self.config
+        row=dict(row)
+        ident=str(row['notice_id'])
+        if not re.fullmatch(r'[0-9]+',ident):raise SourceError('Invalid Nara notice ID')
+        root,_=self.api('getItem',{'idx':ident})
+        node=root.find('body/item')
+        if node is None:raise SourceError('Missing Nara detail')
+        detail=xml_value(node)
+        # Historical API records can reuse an idx across notice types.
+        # An idx match alone does not establish that this is the same job.
+        identity=[('notice_id','idx'),('title','title'),('org','insttname'),('deadline','enddate')]
+        if any(label(row.get(key))!=label(detail.get(field)) for key,field in identity):
+            return None,False
+        row.update(title=label(row['title']),org=label(row['org']),
+                   description=plain(detail.get('contents')),region=label(detail.get('areaname')))
+        candidate=html.unescape(html.unescape(str(detail.get('link01') or '').strip()))
+        if candidate and '://' not in candidate and not candidate.startswith(('/',':')):candidate='https://'+candidate
+        row['agency_url']=canonical_url(candidate)
+        # regdate is a publication date, never an application opening date.
+        row['published_date']=closing(detail.get('regdate'))[0]
+        # begindate is undocumented and live samples disagree with the
+        # explicit application period in contents; do not invent a start.
+        row['start']=None
+        template=c.get('original_url_template')
+        if template:
+            row['source_url']=template.format(notice_id=ident)
+        else:
+            row['source_url']=next((url for field in ('link01','link02','link03')
+                if (url:=original_url(detail.get(field),c['original_hosts']))),None)
+        normalized=normalize([row],self.source_id,self.source_name,now)
+        return (normalized[0] if normalized else None),True
 
     def verify_original(self,job):
         for attempt in range(3):

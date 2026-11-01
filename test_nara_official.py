@@ -3,9 +3,12 @@ import copy
 import datetime as dt
 import json
 import unittest
+import threading
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import Mock, patch
+from urllib.parse import urlsplit, parse_qs
 from collectors.common import KST, SourceError, OfficialHTTP, normalize
 from collectors.nara import NaraCollector, plain, original_url
 from collect_all import merge, collect_alio
@@ -76,6 +79,35 @@ class OfficialNaraTests(unittest.TestCase):
         self.assertEqual([j['id'] for j in result],['nara:289736'])
         self.assertEqual(collector.stats['detail_mismatch'],1)
         self.assertEqual(collector.stats['published'],1)
+
+    def test_parallel_detail_responses_keep_notice_identity_and_counts(self):
+        item=copy.deepcopy(self.list.findall('body/items/item')[0])
+        item.find('idx').text='999999'
+        item.find('title').text='별도 채용'
+        self.list.find('body/items').append(item)
+        self.list.find('body/totalCount').text='3'
+        active=0;maximum=0;guard=threading.Lock()
+        def get(url,**kwargs):
+            nonlocal active,maximum
+            self.assertTrue(kwargs['allow_credentials'])
+            if urlsplit(url).path.endswith('/getList'):return ET.tostring(self.list)
+            ident=parse_qs(urlsplit(url).query)['idx'][0]
+            with guard:active+=1;maximum=max(maximum,active)
+            time.sleep(.03)
+            detail=ET.fromstring(self.detail)
+            detail.find('body/item/idx').text=ident
+            if ident=='999999':detail.find('body/item/title').text='별도 채용'
+            with guard:active-=1
+            return ET.tostring(detail)
+        self.http.get.side_effect=get
+        collector=NaraCollector(self.config,self.http)
+        with patch.dict('os.environ',{'NARA_API_KEY':'synthetic-key'}),patch('collectors.nara.dt.datetime',Clock):
+            jobs=collector.collect()
+        self.assertGreater(maximum,1)
+        self.assertEqual({j['id'] for j in jobs},{'nara:289736','nara:999999'})
+        self.assertEqual(collector.stats['details'],2)
+        self.assertEqual(collector.stats['detail_mismatch'],0)
+        self.assertEqual(collector.stats['published'],2)
 
     def test_credential_reflection_and_original_failure_fail_closed(self):
         with self.assertRaises(SourceError):self.collect(self.detail.replace(b'NORMAL SERVICE.',b'synthetic-key'))
