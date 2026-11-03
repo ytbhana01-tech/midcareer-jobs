@@ -99,13 +99,43 @@ def legacy_snapshot(feed):
             'updated_at':when,'mode':feed.get('source','alio-public-preview'),'originals_verified':False}
 
 
+def published_snapshots(feed):
+    """Recover a missing Actions cache from a previously published multi-source feed.
+
+    Recover primary records only: attribution lacks full source evidence.
+    Keep the original evidence timestamps; recovery is never a fresh collection.
+    """
+    result={}
+    if feed.get('source')!='multi-source':
+        seed=legacy_snapshot(feed)
+        return {'alio':seed} if seed else {}
+    for source,metadata in feed.get('sources',{}).items():
+        if source not in SOURCE_NAMES or metadata.get('status') not in ('ok','cached'):
+            continue
+        when=metadata.get('updated_at')
+        try:stamp=dt.datetime.fromisoformat(when)
+        except (TypeError,ValueError):continue
+        if stamp.tzinfo is None:continue
+        rows={}
+        for job in feed.get('jobs',[]):
+            if job.get('source_id')==source:
+                recovered=dict(job)
+                recovered.pop('attributions',None)
+                rows[recovered['notice_id']]=recovered
+            # Do not copy another source's qualifications into a recovered notice.
+            # Only primary records contain the complete validated source evidence.
+        snapshot={key:metadata[key] for key in ('mode','originals_verified','coverage','stats') if key in metadata}
+        snapshot.update(jobs=list(rows.values()),updated_at=when)
+        result[source]=snapshot
+    return result
+
+
 def run(config,previous,cache,collectors,now=None):
     now=now or dt.datetime.now(KST)
     if now.tzinfo is None:raise SourceError('Timezone-aware collection time required')
     snapshots=dict(cache)
-    if 'alio' not in snapshots:
-        seed=legacy_snapshot(previous)
-        if seed:snapshots['alio']=seed
+    for source,seed in published_snapshots(previous).items():
+        snapshots.setdefault(source,seed)
     statuses={};all_jobs=[]
     for source,name in SOURCE_NAMES.items():
         enabled=source=='alio' or config.get(source,{}).get('enabled',False)

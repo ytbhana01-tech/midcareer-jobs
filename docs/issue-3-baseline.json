@@ -1,0 +1,40 @@
+{
+  "as_of": "2026-11-01T23:23:21.508676+09:00",
+  "baseline_current": 1178,
+  "baseline_sources": {
+    "alio": {
+      "name": "ALIO · 공공기관 경영정보 공개시스템",
+      "status": "ok",
+      "count": 422,
+      "updated_at": "2026-11-01T21:42:07+09:00",
+      "mode": "alio-public-preview",
+      "originals_verified": false
+    },
+    "nara": {
+      "name": "나라일터 · 인사혁신처",
+      "status": "ok",
+      "count": 757,
+      "updated_at": "2026-11-01T22:01:31+09:00",
+      "mode": "official-api",
+      "originals_verified": true,
+      "coverage": "최근 90일 등록 공고",
+      "stats": {
+        "listed": 7376,
+        "expired_or_invalid": 6617,
+        "details": 759,
+        "detail_mismatch": 0,
+        "unmatched_original": 2,
+        "missing_original": 2,
+        "published": 757
+      }
+    },
+    "busan": {
+      "name": "부산광역시",
+      "status": "disabled",
+      "count": 0,
+      "reason": "공식 명세·이용조건 확인 및 활성화 대기"
+    }
+  },
+  "candidates": {},
+  "baseline_sha256": "df6a7a938871eb67fc8f51dc87c17708123c41cbd2798384375b3522c314be0d"
+}
